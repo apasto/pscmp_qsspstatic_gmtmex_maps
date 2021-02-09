@@ -62,15 +62,20 @@ if nargin>6 && ~isempty(varargin{3})
 end
 
 % source point optional argument
-doSource = false;
+SourceType = 'none';
 sourceLonLat = [];
 if nargin>7 && ~isempty(varargin{4})
-    % TO DO: this could allow for drawing a rectangle
-    %        or multiple sources/rectangles
-    doSource = true;
-    sourceLonLat = varargin{4}(:);
-    assert(isequal(size(sourceLonLat), [2, 1]),...
-        'Source Lon Lat argument must be a 2 element vector');
+    % TO DO: this could allow for drawing multiple rectangles or multiple
+    %        point sources, e.g. by providing a cell array.
+    %        Also: may provide focal mechanism to relevant gmt module.
+    sourceLonLat = varargin{4};
+    if isequal(size(sourceLonLat), [1, 2]) % one point [lon, lat]
+        SourceType = 'point';
+    elseif isequal(size(sourceLonLat), [4, 2]) % 4-point rectangle
+        SourceType = 'rectangle';
+    else
+        error('Source Lon Lat argument must be a 2 element vector (point) or a 4 by 2 array (rectangle).')
+    end
 end
 
 % delete leftovers from gmtset
@@ -624,6 +629,19 @@ for m=1:size(ObservableNames, 1)
         gmt(['psbasemap -R -J',...
             ' -B1 -BWesN -O -K -Xc -Yc >> ',...
             MapFilename]);
+        
+        switch SourceType % source dot or fault area rectangle (hor projection)
+            case 'point'
+                gmt(['psxy -R -J',...
+                    ' -Sc10p -Gpurple',...
+                    ' -O -K -Xc -Yc >> ',...
+                    MapFilename], sourceLonLat);
+            case 'rectangle'
+                gmt(['psxy -R -J',...
+                    ' -A -L -Wthick -Wpurple',... % -A straight-line segments
+                    ' -O -K -Xc -Yc >> ',...
+                    MapFilename], [sourceLonLat; sourceLonLat(1,:)]); % repeat first point, close rectangle
+        end
         
         % min/max range text
         MapStatsFontSize = '12p';
