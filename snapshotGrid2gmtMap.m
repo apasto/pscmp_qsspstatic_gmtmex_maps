@@ -6,6 +6,15 @@ function snapshotGrid2gmtMap(dataPath, snapshotFilename, PSCMPQSSPswitch, edgeBu
 %                  assert: is it a regular grid? Then obtain the extents
 %                  and sampling intervals, arguments required by gmt xyz2grd
 %
+%   Automated parameters:
+%    - major and minor z-ticks (to do: documentation)
+%    - grid line step for lon and lat: if range in lon or lat (or both)
+%                                      is less than 2 deg
+%                                      interval is 0.5 deg,
+%                                      else: 1 deg
+%    - country borders ('gmt pscoast -N') are plotted only if range
+%      in lon or lat (or both) is more than 6 deg
+%
 %   Input arguments:
 %      - dataPath : string, path to the directory with the snapshot file
 %                   trailing slash included!
@@ -101,6 +110,14 @@ elseif isequal(size(edgeBufferOffset(:)), [3 ,1]) % [buffer, E-shift, E-shift?]
 else
     error('Size of edgeBufferOffset argument is not valid.')
 end
+
+% static parameters for plotting fine/coarse grid line interval
+GridLines_FineIntervalExtentsThreshold = 2; % [deg], if smaller go from 'coarse' to 'fine' interval
+GridLines_FineInterval = 0.5; % [deg]
+GridLines_CoarseInterval = 1.0; % [deg]
+
+% static parameters for plotting country borders or not
+PlotCountries_ExtentsThreshold = 6.0; % deg
 
 %% allow for single file or couple of files (difference, 2nd minus 1st)
 if ischar(snapshotFilename) || isstring(snapshotFilename)
@@ -557,6 +574,23 @@ MapRegionExtents = RegionExtents + MapRegionBuffer; % map corners [lon1 lon2 lat
 MapRegionExtents(1:2) = MapRegionExtents(1:2) + Eshift;
 MapRegionExtents(3:4) = MapRegionExtents(3:4) + Nshift;
 
+% grid lines: if extents (in any direction) are less than 'GridLines_FineIntervalExtentsThreshold'
+%             use finer grid line interval
+if (abs(MapRegionExtents(2) - MapRegionExtents(1)) <=GridLines_FineIntervalExtentsThreshold || ...
+        abs(MapRegionExtents(4) - MapRegionExtents(3)) <=GridLines_FineIntervalExtentsThreshold)
+    Map_LonLatGridInterval = GridLines_FineInterval;
+else
+    Map_LonLatGridInterval = GridLines_CoarseInterval;
+end
+
+% plot countries only if the lon/lat extents are larger than 'PlotCountries_ExtentsThreshold'
+if (abs(MapRegionExtents(2) - MapRegionExtents(1)) <=PlotCountries_ExtentsThreshold || ...
+        abs(MapRegionExtents(4) - MapRegionExtents(3)) <=PlotCountries_ExtentsThreshold)
+    Map_PlotCountries = false;
+else
+    Map_PlotCountries = true;
+end
+
 Rstring = [... % extents, r option means lower left and upper right coords
     '-R',num2str(MapRegionExtents(1)),'/',num2str(MapRegionExtents(3)),'/',...
     num2str(MapRegionExtents(2)),'/',num2str(MapRegionExtents(4)),'r ']; % extents
@@ -598,10 +632,12 @@ for m=1:size(ObservableNames, 1)
             MapGrid,MapCPT);
 
         % countries
-        gmt(['pscoast -R -J',...
-            ' -P -N1/0.01c,Black',...
-            ' -O -K -Xc -Yc >> ',...
-            MapFilename])
+        if Map_PlotCountries % if extents larger thant PlotCountries_ExtentsThreshold
+            gmt(['pscoast -R -J',...
+                ' -P -N1/0.01c,Black',...
+                ' -O -K -Xc -Yc >> ',...
+                MapFilename])
+        end
         % coasts
         gmt(['pscoast -R -J',...
             ' -P -Di+ -A20000',...
@@ -622,12 +658,13 @@ for m=1:size(ObservableNames, 1)
 
         % semi-trasparent grid
         gmt(['psbasemap -R -J',...
-            ' -B1g1 -t10 -BWesN -O -K -Xc -Yc >> ',...
+            ' -B', num2str(Map_LonLatGridInterval), 'g' , num2str(Map_LonLatGridInterval),... % e.g. -B1g1
+            ' -t10 -BWesN -O -K -Xc -Yc >> ',...
             MapFilename]);
 
         % non-trasparent frame and ticks
         gmt(['psbasemap -R -J',...
-            ' -B1 -BWesN -O -K -Xc -Yc >> ',...
+            ' -B', num2str(Map_LonLatGridInterval), ' -BWesN -O -K -Xc -Yc >> ',...
             MapFilename]);
         
         switch SourceType % source dot or fault area rectangle (hor projection)
