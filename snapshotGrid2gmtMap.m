@@ -154,6 +154,23 @@ else % cases not accounted for: throw error
     error('The snapshot filename type is not allowed.')
 end
 
+% if a .mat file is provided, set a flag to skip import function
+if ~IsDifference
+    if strcmpi(snapshotFilename{1}(end-3:end),'.mat')
+        isMATfile = true;
+    else
+        isMATfile = false;
+    end
+else
+    if strcmpi(snapshotFilename{1}(end-3:end),'.mat')
+        assert(strcmpi(snapshotFilename{2}(end-3:end),'.mat'),...
+            'If the first filename is a mat file, the second one must be in the same format.')
+        isMATfile = true;
+    else
+        isMATfile = false;
+    end
+end
+       
 %% filename and output directories
 
 % complete path to snapshot to be read
@@ -214,7 +231,7 @@ outputConvFigPath = [outputPSPath,'psconverted/'];
 
 % TODO: event position and/or rupture area projection
 
-%% GMT, set frame pen
+%% set GMT parameters
 gmt('gmtset MAP_FRAME_PEN thick,black')
 gmt('gmtset MAP_GRID_PEN_PRIMARY thinnest,gray')
 gmt('gmtset FONT_ANNOT_PRIMARY 12p')
@@ -229,21 +246,39 @@ for f=1:size(filename, 2)
         ['Provided snapshot filename: ''', filename{f}, ''' does not exist.']);
 end
 
-switch lower(PSCMPQSSPswitch)
-    case 'pscmp'
-        if ~IsDifference
-            snapshotData = PSCMPsnapshot2table(filename{1});
-        else
-            snapshotData{1} = PSCMPsnapshot2table(filename{1});
-            snapshotData{2} = PSCMPsnapshot2table(filename{2});
-        end
-    case 'qssp'
-        if ~IsDifference
-            snapshotData = QSSPsnapshot2table(filename{1});
-        else
-            snapshotData{1} = QSSPsnapshot2table(filename{1});
-            snapshotData{2} = QSSPsnapshot2table(filename{2});
-        end
+if ~isMATfile
+    switch lower(PSCMPQSSPswitch)
+        case 'pscmp'
+            if ~IsDifference
+                snapshotData = PSCMPsnapshot2table(filename{1});
+            else
+                snapshotData{1} = PSCMPsnapshot2table(filename{1});
+                snapshotData{2} = PSCMPsnapshot2table(filename{2});
+            end
+        case 'qssp'
+            if ~IsDifference
+                snapshotData = QSSPsnapshot2table(filename{1});
+            else
+                snapshotData{1} = QSSPsnapshot2table(filename{1});
+                snapshotData{2} = QSSPsnapshot2table(filename{2});
+            end
+    end
+else
+    if ~IsDifference
+        snapshotData = load(filename{1});
+        % extract field from structure (expecting 1 field only)
+        loaded_fieldnames = fieldnames(snapshotData);
+        snapshotData = snapshotData.(loaded_fieldnames{1});
+    else
+        snapshotData{1} = load(filename{1});
+        % extract field from structure (expecting 1 field only)
+        loaded_fieldnames = fieldnames(snapshotData{1});
+        snapshotData{1} = snapshotData{1}.(loaded_fieldnames{1});
+        snapshotData{2} = load(filename{2});
+        % extract field from structure (expecting 1 field only)
+        loaded_fieldnames = fieldnames(snapshotData{2});
+        snapshotData{2} = snapshotData{2}.(loaded_fieldnames{1});
+    end
 end
 
 %% assert if we are dealing with a grid, extract range and interval
