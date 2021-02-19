@@ -126,7 +126,7 @@ else
 end
 
 % static parameters for plotting fine/coarse grid line interval
-GridLines_FineIntervalExtentsThreshold = 2; % [deg], if smaller go from 'coarse' to 'fine' interval
+GridLines_FineIntervalExtentsThreshold = 2.25; % [deg], if smaller go from 'coarse' to 'fine' interval
 GridLines_FineInterval = 0.5; % [deg]
 GridLines_CoarseInterval = 1.0; % [deg]
 
@@ -220,6 +220,7 @@ gmt('gmtset MAP_GRID_PEN_PRIMARY thinnest,gray')
 gmt('gmtset FONT_ANNOT_PRIMARY 12p')
 gmt('gmtset FONT_LABEL 10p')
 gmt('gmtset PS_PAGE_ORIENTATION portrait')
+gmt('gmtset MAP_TITLE_OFFSET 36p') % avoids overlap with tick labels
 
 %% import data
 % before loading: do the snapshot file(s) exist?
