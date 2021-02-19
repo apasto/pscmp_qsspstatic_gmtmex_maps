@@ -16,7 +16,7 @@ function splits = qsspGeneratePositions(lonRange, latRange, lonStep, latStep, ns
 %       and after the points, with the following structure
 %       [prepended file, stop after the 'output parameters' comments
 %       "  1    0.0  0.0"
-%       "  1               1           1       1          1"
+%       "  1               1           1       1          1" (may be set to 0)
 %       "  'displacement_[SPLIT NUMBER]'  'vstrain_[SPLIT NUMBER]'  'tilt_[SPLIT NUMBER]'  'gravity_[SPLIT NUMBER]'  'geoid_[SPLIT NUMBER]'"
 %       "  1" (number of output snapshots)
 %       "     0.0    'snap_coseis_[SPLIT NUMBER].dat'"
@@ -34,10 +34,14 @@ function splits = qsspGeneratePositions(lonRange, latRange, lonStep, latStep, ns
 %       NOTE: .dat output of 'modified' rheology model gets overwritten
 %             should check if it is the same in all model runs?
 %
-%   Output arguments:
-%      - LatLon: array, a (lat, lon) couple each row (size: (number of points x 2))
+%       NOTE: due to issues with CR/LF vs LF endline character
+%             save appendFilename as a Unix-type endline (LF only)
+%             (this is probably a trivial issue to fix, but won't do now)
 %
-% 2021-01-27
+%   Output arguments:
+%      - LatLon: cell array, each element an array with a (lat, lon) couple each row
+%
+% 2021-01-27, 2021-02-19 AP
 
 narginchk(5,8)
 nargoutchk(0,1)
@@ -135,6 +139,7 @@ if ~isempty(outFilename) && ~PrependAppendFlag
         disp(' done.')
     end
 elseif ~isempty(outFilename) && PrependAppendFlag
+    toBeAppended = fileread(appendFilename);
     for n=1:number_of_splits
         outFilename_seq = [outFilename, '_split_', num2str(n, intFmt) , '.inp'];
         copyfile(prependFilename, outFilename_seq); % copy part to be prepended
@@ -142,7 +147,7 @@ elseif ~isempty(outFilename) && PrependAppendFlag
         fid=fopen(outFilename_seq, 'at'); % append, t option: CR LF endline (DOS)
         % write preamble, with output files for qssp
         fprintf(fid, '\n  1    0.0  0.0\n'); % NEEDS to start with a newline
-        fprintf(fid, '  1               1           1       1          1\n');
+        fprintf(fid, '  0               0           0       0          0\n'); % set to OFF
         fprintf(fid, ...
             [...
                 '  ''displacement_',intFmt,...
@@ -160,9 +165,17 @@ elseif ~isempty(outFilename) && PrependAppendFlag
         for row=1:size(splits{n}, 1)
             fprintf(fid, ['    ', strLonLatFormat, ' ', strLonLatFormat, ' ''%i'' \n'], splits{n}(row,:), row);
         end
+        % write part to be appended
+        fprintf(fid,'%s',toBeAppended);
         fclose(fid);
         disp(' done.')
     end
+    % print script with required commands (in serie with ';', alternative is '&' parallel)
+    fid=fopen([outFilename, '_launch.sh'], 'wt');
+    for n=1:number_of_splits
+        fprintf(fid, ['printf "', [outFilename, '_split_', num2str(n, intFmt) , '.inp'], '" | qsspstatic_bigmem; \n']);
+    end
+    fclose(fid);
 end
 
 end
