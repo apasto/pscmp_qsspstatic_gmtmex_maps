@@ -1,4 +1,4 @@
-function snapshotGrid2gmtMap(dataPath, snapshotFilename, PSCMPQSSPswitch, edgeBufferOffset, varargin)
+function snapshotGrid2gmtMap(dataPath, snapshotFilename, PSCMPQSSPswitch, ExtentsBuffer, varargin)
 % snapshotGrid2gmtMap still a work in progress! TO DO: documentation
 %    (sub-functions called from here are already documented)
 %PSCMPsnapshotCheckGrid given a 'snapshot' table, read with 'PSCMPsnapshot2table'
@@ -20,12 +20,23 @@ function snapshotGrid2gmtMap(dataPath, snapshotFilename, PSCMPQSSPswitch, edgeBu
 %                   trailing slash included!
 %      - snapshotFilename : string or cell array of strings, filename(s) of the snapshot file(s)
 %      - PSCMPQSSPswitch : string, switch between PSCMP and QSSP output files
-%      - edgeBuffer : either a:
-%                        - scalar float [deg], tighter (negative) or larger (positive)
-%                          border around data (e.g. a negative value trims data and
-%                          zooms on center of covered extents)
-%                        - 3 element vector: [deg]
-%                              [trim/extend border, eastward shift, northward shift]
+%      - ExtentsBuffer : trim data on edges or buffer around edges
+%                           either a:
+%                            - 4 element vector [deg] with forced extents
+%                                 [lon0, lon1, lat0, lat1]
+%                            - scalar float [deg], tighter (negative) or larger (positive)
+%                              border around data (e.g. a negative value trims data and
+%                              zooms on center of covered extents)
+%                            - 2 element vector: [deg], same behaviour as scalar
+%                              but is separated in [lon bugger, lat buffer]
+%                            If argument 'sourceLonLat' is NOT provided,
+%                            the trim/buffer values refer to the extents
+%                            of the provided grid.
+%                            If 'sourceLonLat' is provided, they refer to
+%                            the provided center point or to the
+%                            average coordinates of the 4 fault patch vertices.
+%
+%   Optional input arguments:
 %      - (optional gsPath) : string, path to gswin64c or gswin32c
 %                            (including gswin64c/gswin32c exe file)
 %                            required if it cannot be found in your PATH
@@ -98,17 +109,20 @@ assert(ischar(PSCMPQSSPswitch) || isstring(PSCMPQSSPswitch),...
 assert(any(strcmpi(PSCMPQSSPswitch, {'PSCMP', 'QSSP'})),...
     ['Switch between PSCMP and QSSP only. Provided argument: ', PSCMPQSSPswitch])
 
-% was only an edge buffer provided or [buffer, E-shift, E-shift] ?
-if isscalar(edgeBufferOffset) % only edge buffer/trim
-    edgeBuffer = edgeBufferOffset;
-    Eshift = 0;
-    Nshift = 0;
-elseif isequal(size(edgeBufferOffset(:)), [3 ,1]) % [buffer, E-shift, E-shift?]
-    edgeBuffer = edgeBufferOffset(1);
-    Eshift = edgeBufferOffset(2);
-    Nshift = edgeBufferOffset(3);
+% manage edge buffer/trim or forced extents
+if isscalar(ExtentsBuffer) % only edge buffer/trim
+    ForceExtents = false;
+    edgeBufferLon = ExtentsBuffer;
+    edgeBufferLat = ExtentsBuffer;
+elseif isequal(size(ExtentsBuffer(:)), [2 ,1]) % [lon buffer, lat buffer]
+    ForceExtents = false;
+    edgeBufferLon = ExtentsBuffer(1);
+    edgeBufferLat = ExtentsBuffer(2);
+elseif isequal(size(ExtentsBuffer(:)), [4 ,1]) % [lon0, lon1, lat0, lat1] forced extents
+    ForceExtents = true;
+    % will use ExtentsBuffer as extents
 else
-    error('Size of edgeBufferOffset argument is not valid.')
+    error('Size of ExtentsBuffer argument is not valid.')
 end
 
 % static parameters for plotting fine/coarse grid line interval
@@ -566,13 +580,39 @@ for n=1:size(ObservableNames, 1)
 end
 
 %% define region, -R and -J arguments (extents and projection)
-RegionExtents = [lonRange, latRange]; % data extents [lon1 lon2 lat1 lat2]
-MapRegionBuffer = [-edgeBuffer, edgeBuffer, -edgeBuffer, edgeBuffer]; % buffer/clip around data [lon1 lon2 lat1 lat2]
-MapRegionExtents = RegionExtents + MapRegionBuffer; % map corners [lon1 lon2 lat1 lat2]
-
-% apply eastward shift and northward shift to displayed region
-MapRegionExtents(1:2) = MapRegionExtents(1:2) + Eshift;
-MapRegionExtents(3:4) = MapRegionExtents(3:4) + Nshift;
+RegionExtents = [lonRange, latRange]; % data extents [lon0 lon1 lat0 lat1]
+if ForceExtents % [lon0 lon1 lat0 lat1] were provided, use those
+    MapRegionExtents = ExtentsBuffer;
+else % edge buffer/trim was provided
+    switch SourceType % should we refer them to the grid coverage or around the centre point / fault plane?
+        case 'none'
+            % referring the edge buffer/trim to the grid extents 'RegionExtents'
+            MapRegionBuffer = [...
+                -edgeBufferLon, edgeBufferLon,...
+                -edgeBufferLat, edgeBufferLat]; % buffer/clip around data [lon0 lon1 lat0 lat1]
+            MapRegionExtents = RegionExtents + MapRegionBuffer; % map corners [lon0 lon1 lat0 lat1]
+            MapRegion_isPointReferred = false;
+        case 'point'
+            % referring the buffer around the centre point
+            MapRegion_isPointReferred = true;
+            MapRegion_sourceLonLat = sourceLonLat;
+        case 'rectangle'
+            % referring the buffer around the fault rectangle
+            MapRegion_isPointReferred = true;
+            % compute the rectangle center
+            %    = along column average: [average lon, average lat]
+            MapRegion_sourceLonLat = mean(sourceLonLat, 1);
+    end
+    % avoid repetitions: the following apply if we are 'referring to point' (either point or center of rectangle)
+    if MapRegion_isPointReferred
+        % negative 'trim' is nonsense in this case
+        edgeBufferLon = abs(edgeBufferLon);
+        edgeBufferLat = abs(edgeBufferLat);
+        MapRegionExtents = [...
+            MapRegion_sourceLonLat(1) - edgeBufferLon, MapRegion_sourceLonLat(1) + edgeBufferLon,...
+            MapRegion_sourceLonLat(2) - edgeBufferLat, MapRegion_sourceLonLat(2) + edgeBufferLat];
+    end
+end
 
 % grid lines: if extents (in any direction) are less than 'GridLines_FineIntervalExtentsThreshold'
 %             use finer grid line interval
