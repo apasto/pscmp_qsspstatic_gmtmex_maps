@@ -41,7 +41,7 @@ snapshotData = PSCMPsnapshot2table(snapshotFile);
 
 % find the closest longitude to profileLon
 uniqueLons = uniquetol(snapshotData.Londeg);
-[minLonDiff, minLonDiff_index] = min(abs(uniqueLons - profileLon));
+[minLonDiff, minLonDiff_index] = min(abs(uniqueLons - profileLon)); %#ok<ASGLU>
 profileLonActual = uniqueLons(minLonDiff_index);
 
 % extract indices of rows at the actual profile longitude
@@ -125,6 +125,8 @@ linkaxes([Axes.Gravity, Axes.Displacement, Axes.Fault], 'x');
 Axes.Gravity.XLim = [...
     faultMidpointLat - plotLatWidth,...
     faultMidpointLat + plotLatWidth];
+
+Axes.Gravity.YLimMode = 'manual'; % prevent update of Y range
 
 Axes.Fault.YLim = [0, faultBottomDepth * 1.05];
 
