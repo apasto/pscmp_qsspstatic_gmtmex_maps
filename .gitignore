@@ -1,4 +1,8 @@
-### MATLAB ###
+### GMT ###
+gmt.conf
+gmt.history
+
+### MATLAB/OCTAVE ###
 # Created by https://www.toptal.com/developers/gitignore/api/matlab
 # Windows default autosave extension
 *.asv
