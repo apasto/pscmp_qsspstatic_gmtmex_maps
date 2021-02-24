@@ -72,7 +72,10 @@ profileUz = profileUz * 1e3;
 faultBottomDepth = faultOriginDepth + faultWidth * sin(deg2rad(faultDip));
 % latitude of fault bottom - note assumptions: south dipping
 % get Earth radius for length to arc-along-latitude conversion
-R = referenceSphere('Earth').MeanRadius * 1e-3; % [km]
+% R = referenceSphere('Earth').MeanRadius * 1e-3; % [km]
+% avoid call to 'referenceSphere', would trigger Mapping Toolbox requirement
+%    (one call only would not justify it)
+R = 6371; % [km]
 faultHorizontalWidth = faultWidth * cos(deg2rad(faultDip)); % projection along horizontal
 faultHorizontalLatArc = rad2deg(faultHorizontalWidth / R);
 faultBottomLat = faultOriginLat - faultHorizontalLatArc;
