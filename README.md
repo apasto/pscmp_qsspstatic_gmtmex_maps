@@ -1,6 +1,6 @@
 # From pscmp and qsspstatic output to GMT maps
 
-Read and plot the snapshot-form output of **[PSGRN/PSCMP](https://www.gfz-potsdam.de/en/section/physics-of-earthquakes-and-volcanoes/infrastructure/tool-development-lab/#gfz-collapse-c66634)** ([Wang et al., 2006](https://doi.org/10.1016/j.cageo.2005.08.006)) and **[QSSPSTATIC](https://www.gfz-potsdam.de/en/section/physics-of-earthquakes-and-volcanoes/infrastructure/tool-development-lab/#gfz-collapse-c66638)** ([Wang et al., 2017](https://doi.org/10.1093/gji/ggx259.)), using [GMT](https://www.generic-mapping-tools.org/) and Matlab, via [GMT-MEX](https://github.com/GenericMappingTools/gmtmex).
+Read and plot the snapshot-form output of **[PSGRN/PSCMP](https://www.gfz-potsdam.de/en/section/physics-of-earthquakes-and-volcanoes/infrastructure/tool-development-lab/#gfz-collapse-c66634)** ([Wang et al., 2006](https://doi.org/10.1016/j.cageo.2005.08.006)) and **[QSSPSTATIC](https://www.gfz-potsdam.de/en/section/physics-of-earthquakes-and-volcanoes/infrastructure/tool-development-lab/#gfz-collapse-c66638)** ([Wang et al., 2017](https://doi.org/10.1093/gji/ggx259)), using [GMT](https://www.generic-mapping-tools.org/) and Matlab, via [GMT-MEX](https://github.com/GenericMappingTools/gmtmex).
 
 ### Very abridged context
 
