@@ -6,7 +6,9 @@ Read and plot the snapshot-form output of **[PSGRN/PSCMP](https://www.gfz-potsda
 
 Both codes are aimed at computing co- and post-seismic deformation (and other geophysical observables, e.g. gravity, tilt) due to *dislocations* (mostly earthquakes). *Snapshot outputs* provide all observables, at all computation points, at a given time. PSGRN/PSCMP models a multi-layered half-space, the so called "flat earth" approximation, while QSSP does so in a spherical earth domain.
 
-This is an overly simplified explanation, to provide context for anyone unfamiliar with the codes. Refer to the codes authors' papers linked above and note that no endorsement by the authors is implied in this work.
+This is an overly simplified explanation, to provide context for anyone unfamiliar with the codes.
+
+Refer to the codes authors' papers linked above and note that **I am implying no endorsement by their authors**.
 
 ## Usage example
 
@@ -29,8 +31,8 @@ This was started as a mean to plot maps for an ad-hoc case, with a comfortable l
 
 Specific issues aside, it has two main pitfalls:
 
-* "snapshot file to maps" is meant do be abstracted by gmtMexGrid2grd. There is no "one size fits all solution" and automating some parameters (chiefly: major and minor ticks for z-contours and colormap extents) is prone to breaking easily. Map are still produced, but may end up being ugly. This issue presented clearly already in the one-off application, a specific use case, for which these functions were written - choices made in the automation of plotting parameters were hand tailored around those problems. Expect having to fine-tune some parameters which are not exposed as arguments (and should be).
+* performing the "snapshot file to maps" step is meant to be abstracted by [`gmtMexGrid2grd`](./gmtMexGrid2grd.m). There is no "one size fits all" solution and automating some parameters (chiefly: major and minor ticks for z-contours and colormap extents) is prone to breaking easily. Map are still produced, but may end up ranging from somewhat unclear to outright ugly. This issue presented clearly already in the specific use case for which these functions were written - choices made in the automation of plotting parameters were hand tailored around those problems. In general use, expect having to fine-tune some parameters which are not exposed as arguments (and should be). So: it is quite a leaky abstraction. 😅
 
-* gmtMexGrid2grd is quite a monolithic function, data loading and processing are left together with plot production. A radical refactor, defining "snapshot" as a class, constitutes a good starting point
+* [`gmtMexGrid2grd`](./gmtMexGrid2grd.m) is quite a monolithic do-it-all function: data loading and processing are kept together with plot production. A radical refactor, defining a "snapshot" class, constitutes a good starting point for improvement.
 
-In addition to that, tests would be a nice addition.
+In addition to these, tests are missing.
