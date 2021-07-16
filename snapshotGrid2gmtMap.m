@@ -48,13 +48,15 @@ function snapshotGrid2gmtMap(dataPath, snapshotFilename, PSCMPQSSPswitch, Extent
 %                                  (default: 0.001, 0.999)
 %      - (optional sourceLonLat) : plot the epicenter position, 2 element vector
 %                                  (default: is not plotted)
+%      - (optional noPlots) : only grd conversion, skip plotting
+%                             (default: false)
 %
 %   Output arguments:
 %      none
 %
 % 2021-01-24 AP
 
-narginchk(4,8)
+narginchk(4,10)
 nargoutchk(0,0)
 
 % gspath optional argument
@@ -96,6 +98,13 @@ if nargin>7 && ~isempty(varargin{4})
     else
         error('Source Lon Lat argument must be a 2 element vector (point) or a 4 by 2 array (rectangle).')
     end
+end
+
+% optional argument: only grd conversion, no plotting
+if nargin>8 && ~isempty(varargin{5})
+    noPlotsFlag = logical(varargin{5});
+else
+    noPlotsFlag = false;
 end
 
 % delete leftovers from gmtset
@@ -508,7 +517,6 @@ if IsDifference
     
 end
 
-
 %% perform conversion (e.g. m to mm, m/s2 to mGal, ...)
 % multiplication by a factor AND update gmt mex grid structure min/max
 % with a function!
@@ -537,6 +545,12 @@ for n=1:size(ObservableNames, 1)
     gmtMexGrid2grd(...
         snapshotGrids.(ObservableNames{n}),...
         [outputGridPath, (ObservableNames{n}), '.grd'])
+end
+
+%% return if noPlotsFlag is true
+if noPlotsFlag
+    disp('noPlotsFlag is True, skipping plotting of maps')
+    return
 end
 
 %% colorscales
