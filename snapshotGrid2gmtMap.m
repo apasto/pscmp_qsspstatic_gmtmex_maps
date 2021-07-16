@@ -50,6 +50,8 @@ function snapshotGrid2gmtMap(dataPath, snapshotFilename, PSCMPQSSPswitch, Extent
 %                                  (default: is not plotted)
 %      - (optional noPlots) : only grd conversion, skip plotting
 %                             (default: false)
+%      - (optional extendedTitle) : filename in map title
+%                                   (default: false)
 %
 %   Output arguments:
 %      none
@@ -105,6 +107,13 @@ if nargin>8 && ~isempty(varargin{5})
     noPlotsFlag = logical(varargin{5});
 else
     noPlotsFlag = false;
+end
+
+% optional argument: extended titles with filename
+if nargin>9 && ~isempty(varargin{6})
+    extendedTitle = logical(varargin{6});
+else
+    extendedTitle = false;
 end
 
 % delete leftovers from gmtset
@@ -207,17 +216,16 @@ end
 % output directories names
 if ~IsDifference
     % prepend filename of snapshot
-    outputGridPath = [dataPath, snapshotFilename_noext{1}, '_out_grids/'];
-    outputPSPath = [dataPath, snapshotFilename_noext{1}, '_out_figures/'];
+    snapshotFilename_noext_forOutputDir = snapshotFilename_noext{1};
 else
     % prepend filename of 2nd snapshot 'minus' filename of 1st snapshot
-    snapshotFilename_noext_differenceString = [...
+    snapshotFilename_noext_forOutputDir = [...
         snapshotFilename_noext{2},...
         '_minus_',...
         snapshotFilename_noext{1}];
-    outputGridPath = [dataPath, snapshotFilename_noext_differenceString, '_out_grids/'];
-    outputPSPath = [dataPath, snapshotFilename_noext_differenceString, '_out_figures/'];
 end
+outputGridPath = [dataPath, snapshotFilename_noext_forOutputDir, '_out_grids/'];
+outputPSPath = [dataPath, snapshotFilename_noext_forOutputDir, '_out_figures/'];
 
 % output directory for converted ps files
 outputConvFigPath = [outputPSPath,'psconverted/'];
@@ -247,6 +255,11 @@ gmt('gmtset FONT_ANNOT_PRIMARY 12p')
 gmt('gmtset FONT_LABEL 10p')
 gmt('gmtset PS_PAGE_ORIENTATION portrait')
 gmt('gmtset MAP_TITLE_OFFSET 36p') % avoids overlap with tick labels
+
+% small font size for title, if filenames are included
+if extendedTitle % (else: leave GMT defaults)
+    gmt('gmtset FONT_TITLE 12p')
+end
 
 %% import data
 % before loading: do the snapshot file(s) exist?
@@ -690,6 +703,23 @@ Jstring = ['-JA',...
     '/6i']; % projection (-JA Lambert lon0/lat0)
 RJstring = [Rstring, Jstring]; % extents and projection, concatenated
 
+%% map titles: observable name only or optional 'extended title'
+% the extended title includes the snapshotFilename(s)
+
+if ~extendedTitle
+    ObservableTitles = ObservableNames;
+else
+    % uses the same scheme used for paths (single file and couple difference)
+    ObservableTitles = cell(size(ObservableNames));
+    % format: '${observable} (${file or couple difference name})'
+    for n=1:size(ObservableNames, 1)
+        ObservableTitles{n} = ...
+            [ObservableNames{n},...
+            ' (', snapshotFilename_noext_forOutputDir, ')'];
+    end
+end
+
+
 %% figure (TO DO: in function, useful also for non-snapshot files)
 
 % if do_psconvert==true
@@ -716,8 +746,9 @@ for m=1:size(ObservableNames, 1)
         MapMinorTickInt = MinorTickInt.(ObservableNames{m});
         MapMajorTickInt = MapMinorTickInt * 5;
 
+        % grdimage and title
         gmt(['grdimage ',RJstring,...
-            ' -E -Q -nc+c -C -K -P -Xc -Yc -B+t"',ObservableNames{m},'" > ',...
+            ' -E -Q -nc+c -C -K -P -Xc -Yc -B+t"',ObservableTitles{m},'" > ',...
             MapFilename],...
             MapGrid,MapCPT);
 
@@ -869,5 +900,7 @@ disp(['[DONE!] GMT call done in ',num2str(toc(CommonGMT_start),'%.3f'),' s'])
         out = ((roundfunc((in/(10^(stepDIG)))*stepdiv))/stepdiv)*(10^(stepDIG));
         
     end
+
+gmt('destroy') % housekeeping, free memory
 
 end
