@@ -562,7 +562,9 @@ end
 
 %% return if noPlotsFlag is true
 if noPlotsFlag
-    disp('noPlotsFlag is True, skipping plotting of maps')
+    disp([...
+        snapshotFilename_noext_forOutputDir,...
+        ' : noPlotsFlag is True, skipping plotting of maps'])
     return
 end
 
