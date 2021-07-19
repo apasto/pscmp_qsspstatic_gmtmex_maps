@@ -49,19 +49,26 @@ function snapshotGrid2gmtMap(dataPath, snapshotFilename, PSCMPQSSPswitch, Extent
 %      - (optional sourceLonLat) : plot the epicenter position, 2 element vector
 %                                  (default: is not plotted)
 %      - (optional noPlots) : only grd conversion, skip plotting
-%                             (default: false)
+%                             (default: false, carry out plotting)
 %      - (optional extendedTitle) : filename in map title
-%                                   (default: false)
+%                                   (default: false, title is observable name only)
+%      - (optional gsFallBack) : instead of psconvert, fall back to calling
+%                                gs directly (some functionality gets lost
+%                                but at least it gets the job done)
+%                                Also it is faster.
+%                                (default: true, call gs directly)
+%      - (optional doConvertPS) : perform conversion of ps files
+%                                 (default: true)
 %
 %   Output arguments:
 %      none
 %
 % 2021-01-24 AP
 
-narginchk(4,10)
+narginchk(4,12)
 nargoutchk(0,0)
 
-% gspath optional argument
+% gspath optional argument (used for fallback, if gsFallBack is true)
 gsPath = 'gswin64c'; % default: assume it can be found in PATH
 if nargin>4 && ~isempty(varargin{1})
     assert((ischar(varargin{1}) || isstring(varargin{2})),...
@@ -114,6 +121,20 @@ if nargin>9 && ~isempty(varargin{6})
     extendedTitle = logical(varargin{6});
 else
     extendedTitle = false;
+end
+
+% optional argument: use gs directly instead of psconvert
+if nargin>10 && ~isempty(varargin{7})
+    gsFallBack = logical(varargin{7});
+else
+    gsFallBack = true;
+end
+
+% optional argument: do ps conversion (with psconvert or gs directly)
+if nargin>11 && ~isempty(varargin{8})
+    doConvertPS = logical(varargin{8});
+else
+    doConvertPS = true;
 end
 
 % delete leftovers from gmtset
@@ -831,28 +852,30 @@ for m=1:size(ObservableNames, 1)
         GMT_elap = toc(GMT_start);
         disp([GMT_progress,' GMT: ''',MapFilename,...
             ''' written in ',num2str(GMT_elap,'%.3f'),' s']);
-%        GMT_start = tic;
-%         if do_psconvert==true
-%             gmt(['psconvert ',MapFilename,' -A -P ',PsConvertTypeString,' -D',outputConvFigPath])
-%             GMT_elap = toc(GMT_start);
-%             disp([GMT_progress,' GMT: ''',MapFilename,...
-%                 ''' psconverted to ',OutputFormat,' in ',num2str(GMT_elap,'%.3f'),' s']);
-%         end
-        % temporary workaround: perform conversion with gs directly
-        % note that by doing so we lose some gmt psconvert specifics
-        % such as crop-to-bounding-box
-        [gsCallStatus, gsCallCmdOut] = system([...
-            gsPath, ' -dNOSAFER -dNOPAUSE -dBATCH -DPSL_no_pagefill ',...
-            '-sDEVICE=png16m -dUseCropBox -r200 -sOutputFile=',...
-            outputConvFigPath,ObservableNames{m},'.png ', MapFilename]);
-        if gsCallStatus==0
-            disp([GMT_progress,' GMT: ''',MapFilename,...
-                ''' converted to png.']);
-        else
-            disp([GMT_progress,' GMT: ''',MapFilename,...
-                ''' conversion returned non-zero exit status.']);
-            disp(gsCallStatus)
-            disp(gsCallCmdOut)
+        
+        if doConvertPS
+            if ~gsFallBack
+                % TODO: allow to specify filetype to convert ps files to
+                PsConvertTypeString='-Tg'; % png
+                gmt(['psconvert ',MapFilename,' -A -P ',PsConvertTypeString,' -D',outputConvFigPath])
+            else
+                % perform conversion with gs directly
+                % note that by doing so we lose some gmt psconvert specifics
+                % such as crop-to-bounding-box
+                [gsCallStatus, gsCallCmdOut] = system([...
+                    gsPath, ' -dNOSAFER -dNOPAUSE -dBATCH -DPSL_no_pagefill ',...
+                    '-sDEVICE=png16m -dUseCropBox -r200 -sOutputFile=',...
+                    outputConvFigPath,ObservableNames{m},'.png ', MapFilename]);
+                if gsCallStatus==0
+                    disp([GMT_progress,' GMT: ''',MapFilename,...
+                        ''' converted to png.']);
+                else
+                    disp([GMT_progress,' GMT: ''',MapFilename,...
+                        ''' conversion returned non-zero exit status.']);
+                    disp(gsCallStatus)
+                    disp(gsCallCmdOut)
+                end
+            end
         end
     end
 end
