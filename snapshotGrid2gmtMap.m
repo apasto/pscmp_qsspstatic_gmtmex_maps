@@ -742,7 +742,6 @@ else
     end
 end
 
-
 %% figure (TO DO: in function, useful also for non-snapshot files)
 
 % if do_psconvert==true
