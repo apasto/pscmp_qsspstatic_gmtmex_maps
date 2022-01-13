@@ -251,7 +251,7 @@ outputPSPath = [dataPath, snapshotFilename_noext_forOutputDir, '_out_figures/'];
 % output directory for converted ps files
 outputConvFigPath = [outputPSPath,'psconverted/'];
 
-%% output format for psconvert: not working right now, using gs as fallaback
+%% output format for psconvert: not working right now, using gs as fallback
 
 % do_psconvert = false;  % TO DO: conversion is failing, call to gs fails!
 % temporary fix: gswin64c is called directly
@@ -290,6 +290,7 @@ for f=1:size(filename, 2)
 end
 
 if ~isMATfile
+    % raw snapshot, to be read in, is provided
     switch lower(PSCMPQSSPswitch)
         case 'pscmp'
             if ~IsDifference
@@ -307,6 +308,7 @@ if ~isMATfile
             end
     end
 else
+    % mat file is provided
     if ~IsDifference
         snapshotData = load(filename{1});
         % extract field from structure (expecting 1 field only)
@@ -689,7 +691,8 @@ else % edge buffer/trim was provided
             %    = along column average: [average lon, average lat]
             MapRegion_sourceLonLat = mean(sourceLonLat, 1);
     end
-    % avoid repetitions: the following apply if we are 'referring to point' (either point or center of rectangle)
+    % avoid repetitions: the following apply if we are 'referring to point'
+    % (either point or center of rectangle)
     if MapRegion_isPointReferred
         % negative 'trim' is nonsense in this case
         edgeBufferLon = abs(edgeBufferLon);
@@ -777,14 +780,14 @@ for m=1:size(ObservableNames, 1)
         % countries
         if Map_PlotCountries % if extents larger thant PlotCountries_ExtentsThreshold
             gmt(['pscoast -R -J',...
-                ' -P -N1/0.01c,Black',...
+                ' -P -N1/0.01c,White',...
                 ' -O -K -Xc -Yc >> ',...
                 MapFilename])
         end
         % coasts
         gmt(['pscoast -R -J',...
             ' -P -Di+ -A20000',...
-            ' -W0.03c,Black -O -K -Xc -Yc >> ',...
+            ' -W0.03c,White -O -K -Xc -Yc >> ',...
             MapFilename])
         
         % contours
