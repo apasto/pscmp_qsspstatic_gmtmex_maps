@@ -592,79 +592,18 @@ if noPlotsFlag
 end
 
 %% colorscales
+% to do: CPT_colorScale as argument
 CPT_colorScale = 'roma -E -Z'; % E, Z options: linear continous colorscale
 
-% quantiles to clip min/max limits of colorscales at (to avoid outliers)
-%MinQuantile = 0.001;
-%MaxQuantile = 0.999;
-
+% operation is wrapped by grd2gmtMap_call_grd2cpt
 for n=1:size(ObservableNames, 1)
-    % skip zero-z-range grid, to avoid grd2cpt errors
-    if ~((snapshotGrids.(ObservableNames{n}).range(6) - snapshotGrids.(ObservableNames{n}).range(5)) == 0)
-        % compute 'optimal' minor tick interval (TO DO: could be better!)
-        MinorTickInt.(ObservableNames{n}) = ...
-            RoundToStep(0.1, ...
-                (snapshotGrids.(ObservableNames{n}).range(6) - ...
-                snapshotGrids.(ObservableNames{n}).range(5)) / 25,...
-                'ceil');
-        if MinorTickInt.(ObservableNames{n}) > 10
-            MinorTickInt.(ObservableNames{n}) = RoundToStep(...
-                5, MinorTickInt.(ObservableNames{n}), 'ceil');
-        end
-        MajorTickInt.(ObservableNames{n}) = MinorTickInt.(ObservableNames{n})*5;
-        if MajorTickInt.(ObservableNames{n}) > 5
-            MajorTickInt.(ObservableNames{n}) = RoundToStep(...
-                5, MajorTickInt.(ObservableNames{n}), 'ceil');
-            MinorTickInt.(ObservableNames{n}) = MajorTickInt.(ObservableNames{n}) / 5;
-        end
-        CPTs.(ObservableNames{n}) = gmt([...
-            'grd2cpt -C', CPT_colorScale,...
-            ' -L',...
-            num2str(RoundToStep(...
-                MinorTickInt.(ObservableNames{n}),...
-                quantile(snapshotGrids.(ObservableNames{n}).z(:),MinQuantile),...
-                'floor')),'/',...
-            num2str(RoundToStep(...
-                MinorTickInt.(ObservableNames{n}),...
-                quantile(snapshotGrids.(ObservableNames{n}).z(:),MaxQuantile),...
-                'ceil')),...
-            ' -Di'],...
-            snapshotGrids.(ObservableNames{n}));
-        % avoid case in which the colorscale covers less than a 2 major ticks range
-        l = 0; % re-set loop counter
-        while (CPTs.(ObservableNames{n}).minmax(2) - CPTs.(ObservableNames{n}).minmax(1)) < (MajorTickInt.(ObservableNames{n}) * 2)
-            MajorTickInt.(ObservableNames{n}) = MinorTickInt.(ObservableNames{n}) / 2;
-            MinorTickInt.(ObservableNames{n}) = MinorTickInt.(ObservableNames{n}) / 10;
-            % re-call grd2cpt
-            CPTs.(ObservableNames{n}) = gmt([...
-                'grd2cpt -C', CPT_colorScale,...
-                ' -L',...
-                num2str(RoundToStep(...
-                MinorTickInt.(ObservableNames{n}),...
-                quantile(snapshotGrids.(ObservableNames{n}).z(:),MinQuantile),...
-                'floor')),'/',...
-                num2str(RoundToStep(...
-                MinorTickInt.(ObservableNames{n}),...
-                quantile(snapshotGrids.(ObservableNames{n}).z(:),MaxQuantile),...
-                'ceil')),...
-                ' -Di'],...
-                snapshotGrids.(ObservableNames{n}));
-            l = l+1;
-            if l>4
-                break
-            end
-        end
-        % avoid case in which there are 'too many' divisions in the cpt range
-        l = 0; % re-set loop counter
-        while ((CPTs.(ObservableNames{n}).minmax(2) - CPTs.(ObservableNames{n}).minmax(1)) / MinorTickInt.(ObservableNames{n})) > 35
-            MajorTickInt.(ObservableNames{n}) = MajorTickInt.(ObservableNames{n}) * 2;
-            MinorTickInt.(ObservableNames{n}) = MinorTickInt.(ObservableNames{n}) * 2;
-            l = l+1;
-            if l>4
-                break
-            end
-        end
-    end
+    [...
+        MinorTickInt.(ObservableNames{n}),...
+        MajorTickInt.(ObservableNames{n}),...
+        CPTs.(ObservableNames{n})] = grd2gmtMap_call_grd2cpt(...
+        snapshotGrids.(ObservableNames{n}),...
+        CPT_colorScale,...
+        MinQuantile, MaxQuantile); %#ok<STRNU> % MajorTickInt is unused
 end
 
 %% define region, -R and -J arguments (extents and projection)
@@ -882,51 +821,6 @@ for m=1:size(ObservableNames, 1)
     end
 end
 disp(['[DONE!] GMT call done in ',num2str(toc(CommonGMT_start),'%.3f'),' s'])
-
-%% nested function: round to nearest value according to step
-    function out = RoundToStep(step,in,direction)
-        %RoundToStep round(/floor/ceil/fix) input vector to nearest arbitrary 'step' unit
-        % digit-counting code comes from this answer by user Jaymin on matlabcentral:
-        % https://mathworks.com/matlabcentral/answers/10795-counting-the-number-of-digits#answer_68482
-        %
-        % Syntax: out = RoundToStep(step,in,[direction])
-        %
-        % Inputs:
-        %    step        : scalar, unit value
-        %    in          : vector of values to be rounded
-        %    [direction] : char vector, optional, direction of rounding
-        %                  'round', 'floor', 'ceil', 'fix'
-        %                  'round' is default behaviour
-        %                  case insensitive
-        %
-        % Outputs:
-        %    out         : rounded 'in' vector
-        %
-
-        
-        % check and manage input
-        narginchk(2,3)
-        if nargin==2
-            direction='round';
-        end
-        assert(isscalar(step),'Argument ''step'' must be a scalar.')
-        assert(isvector(in),'Argument ''in'' must be a vector.')
-        % check if 'direction' is an allowed round-like function
-        allowed_directions = {'round','floor','ceil','fix'};
-        assert(any(strcmpi(allowed_directions,direction)),...
-            ['''',direction,''' is not an allowed rounding function.'])
-        
-        % count the number of digits
-        stepDIG = numel(num2str(step))-numel(strfind(num2str(step),'-'))-numel(strfind(num2str(step),'.'));
-        
-        % number of zsteps in next power of 10
-        stepdiv = (10^(stepDIG))/step;
-        
-        % round/floor/ceil/fix to step
-        roundfunc = str2func(lower(direction)); % create handle to selected rounding function
-        out = ((roundfunc((in/(10^(stepDIG)))*stepdiv))/stepdiv)*(10^(stepDIG));
-        
-    end
 
 gmt('destroy') % housekeeping, free memory
 
