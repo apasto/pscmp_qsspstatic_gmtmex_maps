@@ -149,28 +149,9 @@ assert(any(strcmpi(PSCMPQSSPswitch, {'PSCMP', 'QSSP'})),...
     ['Switch between PSCMP and QSSP only. Provided argument: ', PSCMPQSSPswitch])
 
 % manage edge buffer/trim or forced extents
-if isscalar(ExtentsBuffer) % only edge buffer/trim
-    ForceExtents = false;
-    edgeBufferLon = ExtentsBuffer;
-    edgeBufferLat = ExtentsBuffer;
-elseif isequal(size(ExtentsBuffer(:)), [2 ,1]) % [lon buffer, lat buffer]
-    ForceExtents = false;
-    edgeBufferLon = ExtentsBuffer(1);
-    edgeBufferLat = ExtentsBuffer(2);
-elseif isequal(size(ExtentsBuffer(:)), [4 ,1]) % [lon0, lon1, lat0, lat1] forced extents
-    ForceExtents = true;
-    % will use ExtentsBuffer as extents
-else
-    error('Size of ExtentsBuffer argument is not valid.')
-end
+[ForceExtents, edgeBufferLon, edgeBufferLat] = ...
+    grd2gmtMap_manage_buffer_extents(ExtentsBuffer);
 
-% static parameters for plotting fine/coarse grid line interval
-GridLines_FineIntervalExtentsThreshold = 2.25; % [deg], if smaller go from 'coarse' to 'fine' interval
-GridLines_FineInterval = 0.5; % [deg]
-GridLines_CoarseInterval = 1.0; % [deg]
-
-% static parameters for plotting country borders or not
-PlotCountries_ExtentsThreshold = 6.0; % deg
 
 %% allow for single file or couple of files (difference, 2nd minus 1st)
 if ischar(snapshotFilename) || isstring(snapshotFilename)
@@ -607,66 +588,14 @@ for n=1:size(ObservableNames, 1)
 end
 
 %% define region, -R and -J arguments (extents and projection)
-RegionExtents = [lonRange, latRange]; % data extents [lon0 lon1 lat0 lat1]
-if ForceExtents % [lon0 lon1 lat0 lat1] were provided, use those
-    MapRegionExtents = ExtentsBuffer;
-else % edge buffer/trim was provided
-    switch SourceType % should we refer them to the grid coverage or around the centre point / fault plane?
-        case 'none'
-            % referring the edge buffer/trim to the grid extents 'RegionExtents'
-            MapRegionBuffer = [...
-                -edgeBufferLon, edgeBufferLon,...
-                -edgeBufferLat, edgeBufferLat]; % buffer/clip around data [lon0 lon1 lat0 lat1]
-            MapRegionExtents = RegionExtents + MapRegionBuffer; % map corners [lon0 lon1 lat0 lat1]
-            MapRegion_isPointReferred = false;
-        case 'point'
-            % referring the buffer around the centre point
-            MapRegion_isPointReferred = true;
-            MapRegion_sourceLonLat = sourceLonLat;
-        case 'rectangle'
-            % referring the buffer around the fault rectangle
-            MapRegion_isPointReferred = true;
-            % compute the rectangle center
-            %    = along column average: [average lon, average lat]
-            MapRegion_sourceLonLat = mean(sourceLonLat, 1);
-    end
-    % avoid repetitions: the following apply if we are 'referring to point'
-    % (either point or center of rectangle)
-    if MapRegion_isPointReferred
-        % negative 'trim' is nonsense in this case
-        edgeBufferLon = abs(edgeBufferLon);
-        edgeBufferLat = abs(edgeBufferLat);
-        MapRegionExtents = [...
-            MapRegion_sourceLonLat(1) - edgeBufferLon, MapRegion_sourceLonLat(1) + edgeBufferLon,...
-            MapRegion_sourceLonLat(2) - edgeBufferLat, MapRegion_sourceLonLat(2) + edgeBufferLat];
-    end
-end
+[MapRegionExtents, RJstring] = grd2gmtMap_create_RJ_options(...
+    lonRange, latRange, ExtentsBuffer, ForceExtents,...
+    SourceType, sourceLonLat,...
+    edgeBufferLon, edgeBufferLat);
 
-% grid lines: if extents (in any direction) are less than 'GridLines_FineIntervalExtentsThreshold'
-%             use finer grid line interval
-if (abs(MapRegionExtents(2) - MapRegionExtents(1)) <=GridLines_FineIntervalExtentsThreshold || ...
-        abs(MapRegionExtents(4) - MapRegionExtents(3)) <=GridLines_FineIntervalExtentsThreshold)
-    Map_LonLatGridInterval = GridLines_FineInterval;
-else
-    Map_LonLatGridInterval = GridLines_CoarseInterval;
-end
+Map_PlotCountries = grd2gmtMap_manage_countries(MapRegionExtents);
 
-% plot countries only if the lon/lat extents are larger than 'PlotCountries_ExtentsThreshold'
-if (abs(MapRegionExtents(2) - MapRegionExtents(1)) <=PlotCountries_ExtentsThreshold || ...
-        abs(MapRegionExtents(4) - MapRegionExtents(3)) <=PlotCountries_ExtentsThreshold)
-    Map_PlotCountries = false;
-else
-    Map_PlotCountries = true;
-end
-
-Rstring = [... % extents, r option means lower left and upper right coords
-    '-R',num2str(MapRegionExtents(1)),'/',num2str(MapRegionExtents(3)),'/',...
-    num2str(MapRegionExtents(2)),'/',num2str(MapRegionExtents(4)),'r ']; % extents
-Jstring = ['-JA',...
-    num2str(RegionExtents(1)+(RegionExtents(2)-RegionExtents(1))/2),'/',... % lon0 center
-    num2str(RegionExtents(3)+(RegionExtents(4)-RegionExtents(3))/2),...     % lat0 center
-    '/6i']; % projection (-JA Lambert lon0/lat0)
-RJstring = [Rstring, Jstring]; % extents and projection, concatenated
+Map_LonLatGridInterval = grd2gmtMap_manage_gridlines(MapRegionExtents);
 
 %% map titles: observable name only or optional 'extended title'
 % the extended title includes the snapshotFilename(s)
