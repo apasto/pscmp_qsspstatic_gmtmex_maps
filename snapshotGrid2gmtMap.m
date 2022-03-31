@@ -448,6 +448,7 @@ commonUnits.Gravity = '@~m@~Gal'; % microGal
 
 % common conversion factors
 commonConv.Displacement = 1e3;
+commonConv.Displacement_LOS = -commonConv.Displacement;
 commonConv.Stress = 1e-3;
 commonConv.Tilt = 1e6;
 commonConv.Rotation = commonConv.Tilt;
@@ -487,7 +488,7 @@ switch lower(PSCMPQSSPswitch)
         Conv.Rotation = commonConv.Rotation;
         Conv.Geoid = commonConv.Geoid;
         Conv.Gravity = commonConv.Gravity;
-        Conv.Disp_LOS = commonConv.Displacement;
+        Conv.Disp_LOS = commonConv.Displacement_LOS;
     case 'qssp'
         % units strings
         Units.Station = '';
@@ -613,7 +614,7 @@ else
     end
 end
 
-%% figure (TO DO: in function, useful also for non-snapshot files)
+%% figure
 
 % if do_psconvert==true
 % disp('Note that GMT psconvert fails if the target file is open in another program!')
