@@ -87,5 +87,9 @@ if ~((in_grid.range(6) - in_grid.range(5)) == 0)
             break
         end
     end
+else % grid has zero z-range
+    minor_tick_int = NaN;
+    major_tick_int = NaN;
+    out_cpt = NaN;
 end
 end
