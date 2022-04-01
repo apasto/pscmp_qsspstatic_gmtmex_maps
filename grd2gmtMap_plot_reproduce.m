@@ -48,14 +48,20 @@ else
     colorscale_min_max = [];
 end
 % opt argument: override source type and lon lat (point, rectangles)
-if nargin==12 && ~isempty(varargin{5}) && ~isempty(varargin{6})
+if nargin>11 && ~isempty(varargin{5}) && ~isempty(varargin{6})
     plot_map_arguments.source_type = varargin{5};
     plot_map_arguments.source_lon_lat = varargin{6};
+end
+% opt argument: override colormap name
+if nargin>12 && ~isempty(varargin{7})
+    colormap_name = varargin{7};
+else
+    colormap_name = 'roma';
 end
 
 if new_cpt
     % temp: use fixed colorscale
-    cpt_colorscale = 'roma -E -Z';
+    cpt_colorscale = [colormap_name,' -E -Z'];
     if ~colorscale_min_max_are_fixed
         % temp: use fixed min and max quantiles
         min_quantile = 0.001; % default
