@@ -135,9 +135,19 @@ gmt(['psbasemap -R -J',...
 % min/max range text
 stats_font_size = '12p';
 stats_X_shift = '0i';
+stats_str_min_format = '%6.3f';
+stats_str_max_format = '%6.3f';
+% scientific notation if min or max are very small
+if abs(map_grid.range(5)) < 1e-3
+    stats_str_min_format = '%6.3e';
+end
+if abs(map_grid.range(6)) < 1e-3
+    stats_str_max_format = '%6.3e';
+end
 stats_text = [...
-    'min = ',num2str(map_grid.range(5), '%6.3f'),...
-    ', max = ',num2str(map_grid.range(6), '%6.3f')];
+    'min = ',num2str(map_grid.range(5), stats_str_min_format),...
+    ', max = ',num2str(map_grid.range(6), stats_str_max_format)];
+
 gmt(['pstext ',...
     ' -R1/10/1/10 -JX10 -F+f',stats_font_size,'+cCM',... % +cCM : justification
     ' -P -O -K -Xc',stats_X_shift,' -Yc',stats_Y_shift,...

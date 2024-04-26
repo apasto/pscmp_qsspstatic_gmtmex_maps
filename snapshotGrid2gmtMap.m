@@ -251,7 +251,8 @@ outputConvFigPath = [outputPSPath,'psconverted/'];
 % TODO: event position and/or rupture area projection
 
 %% set GMT parameters
-grd2gmtMap_set_gmt_defaults(extendedTitle) % small font size for title, if filenames are included in title
+% small font size for title, if filenames are included in title
+grd2gmtMap_set_gmt_defaults(extendedTitle)
 
 %% import data
 % before loading: do the snapshot file(s) exist?
@@ -313,15 +314,19 @@ switch lower(PSCMPQSSPswitch)
         if ~IsDifference
             [lonRange, latRange, lonStep, latStep] = PSCMPsnapshotCheckGrid(snapshotData);
         else
-            [lonRange(1, :), latRange(1, :), lonStep(1), latStep(1)] = PSCMPsnapshotCheckGrid(snapshotData{1});
-            [lonRange(2, :), latRange(2, :), lonStep(2), latStep(2)] = PSCMPsnapshotCheckGrid(snapshotData{2});
+            [lonRange(1, :), latRange(1, :), lonStep(1), latStep(1)] = PSCMPsnapshotCheckGrid( ...
+                snapshotData{1});
+            [lonRange(2, :), latRange(2, :), lonStep(2), latStep(2)] = PSCMPsnapshotCheckGrid( ...
+                snapshotData{2});
         end
     case 'qssp'
         if ~IsDifference
             [lonRange, latRange, lonStep, latStep] = QSSPsnapshotCheckGrid(snapshotData);
         else
-            [lonRange(1, :), latRange(1, :), lonStep(1), latStep(1)] = QSSPsnapshotCheckGrid(snapshotData{1});
-            [lonRange(2, :), latRange(2, :), lonStep(2), latStep(2)] = QSSPsnapshotCheckGrid(snapshotData{2});
+            [lonRange(1, :), latRange(1, :), lonStep(1), latStep(1)] = QSSPsnapshotCheckGrid( ...
+                snapshotData{1});
+            [lonRange(2, :), latRange(2, :), lonStep(2), latStep(2)] = QSSPsnapshotCheckGrid( ...
+                snapshotData{2});
         end
 end
 
@@ -339,21 +344,25 @@ if IsDifference % assert the two snapshot for same grid
 end
 
 %% call xyz2grd
-if ~IsDifference
-    snapshotGrids = snapshotTable2gmtMexGrid(...
-        snapshotData, lonStep, latStep, lonRange, latRange);
-    % store names of grids
-    ObservableNames = fieldnames(snapshotGrids);
-else
-    snapshotGrids{1} = snapshotTable2gmtMexGrid(...
-        snapshotData{1}, lonStep, latStep, lonRange, latRange);
-    snapshotGrids{2} = snapshotTable2gmtMexGrid(...
-        snapshotData{2}, lonStep, latStep, lonRange, latRange);
-    % store names of grids and assert for equality
-    ObservableNames = fieldnames(snapshotGrids{1});
-    assert(all(strcmp(ObservableNames, fieldnames(snapshotGrids{2}))),...
-        'Observable names in the two provided snapshots are different.')
-end
+% if ~IsDifference
+%     snapshotGrids = snapshotTable2gmtMexGrid(...
+%         snapshotData, lonStep, latStep, lonRange, latRange);
+%     % store names of grids
+%     ObservableNames = fieldnames(snapshotGrids);
+% else
+%     snapshotGrids{1} = snapshotTable2gmtMexGrid(...
+%         snapshotData{1}, lonStep, latStep, lonRange, latRange);
+%     snapshotGrids{2} = snapshotTable2gmtMexGrid(...
+%         snapshotData{2}, lonStep, latStep, lonRange, latRange);
+%     % store names of grids and assert for equality
+%     ObservableNames = fieldnames(snapshotGrids{1});
+%     assert(all(strcmp(ObservableNames, fieldnames(snapshotGrids{2}))),...
+%         'Observable names in the two provided snapshots are different.')
+% end
+snapshotGrids = snapshotTable2gmtMexGrid(...
+    snapshotData, lonStep, latStep, lonRange, latRange);
+% store names of grids
+ObservableNames = fieldnames(snapshotGrids);
 
 %% compute free-air-correction-removal
 % psgrn/pscmp and qssp apply a free-air correction to model
@@ -376,45 +385,60 @@ switch lower(PSCMPQSSPswitch)
     case 'pscmp'
         assert(any(strcmp(ObservableNames,'Disp_down')),...
             'Expecting ''Disp_down'' field, but none was found.');
-        if ~IsDifference
-            snapshotGrids.Gravity.z = countercorrectFreeAir_pscmp_qssp(...
-                snapshotGrids.Gravity.z, -snapshotGrids.Disp_down.z);
-        else
-            snapshotGrids{1}.Gravity.z = countercorrectFreeAir_pscmp_qssp(...
-                snapshotGrids{1}.Gravity.z, -snapshotGrids{1}.Disp_down.z);
-            snapshotGrids{2}.Gravity.z = countercorrectFreeAir_pscmp_qssp(...
-                snapshotGrids{2}.Gravity.z, -snapshotGrids{2}.Disp_down.z);
-        end
+        snapshotGrids.Gravity.z = countercorrectFreeAir_pscmp_qssp(...
+            snapshotGrids.Gravity.z, -snapshotGrids.Disp_down.z);
+%         if ~IsDifference
+%             snapshotGrids.Gravity.z = countercorrectFreeAir_pscmp_qssp(...
+%                 snapshotGrids.Gravity.z, -snapshotGrids.Disp_down.z);
+%         else
+%             snapshotGrids{1}.Gravity.z = countercorrectFreeAir_pscmp_qssp(...
+%                 snapshotGrids{1}.Gravity.z, -snapshotGrids{1}.Disp_down.z);
+%             snapshotGrids{2}.Gravity.z = countercorrectFreeAir_pscmp_qssp(...
+%                 snapshotGrids{2}.Gravity.z, -snapshotGrids{2}.Disp_down.z);
+%         end
     case 'qssp'
         assert(any(strcmp(ObservableNames,'U_z')),...
             'Expecting ''U_z'' field, but none was found.');
-        if ~IsDifference
-            snapshotGrids.Grav.z = countercorrectFreeAir_pscmp_qssp(...
-                snapshotGrids.Grav.z, snapshotGrids.U_z.z);
-        else
-            snapshotGrids{1}.Grav.z = countercorrectFreeAir_pscmp_qssp(...
-                snapshotGrids{1}.Grav.z, snapshotGrids{1}.U_z.z);
-            snapshotGrids{2}.Grav.z = countercorrectFreeAir_pscmp_qssp(...
-                snapshotGrids{2}.Grav.z, snapshotGrids{2}.U_z.z);
-        end
+        snapshotGrids.Grav.z = countercorrectFreeAir_pscmp_qssp(...
+            snapshotGrids.Grav.z, snapshotGrids.U_z.z);
+%         if ~IsDifference
+%             snapshotGrids.Grav.z = countercorrectFreeAir_pscmp_qssp(...
+%                 snapshotGrids.Grav.z, snapshotGrids.U_z.z);
+%         else
+%             snapshotGrids{1}.Grav.z = countercorrectFreeAir_pscmp_qssp(...
+%                 snapshotGrids{1}.Grav.z, snapshotGrids{1}.U_z.z);
+%             snapshotGrids{2}.Grav.z = countercorrectFreeAir_pscmp_qssp(...
+%                 snapshotGrids{2}.Grav.z, snapshotGrids{2}.U_z.z);
+%         end
 end
 
 % update z range in gmt-mex grid struct
 % TO DO: do switch once, set name of 'gravity' field and sign of displacement
-if ~IsDifference
-    switch lower(PSCMPQSSPswitch)
-        case 'pscmp'
-            snapshotGrids.Gravity.range(5:6) = ...
-                [min(snapshotGrids.Gravity.z(:)),...
-                max(snapshotGrids.Gravity.z(:))];
-        case 'qssp'
-            snapshotGrids.Grav.range(5:6) = ...
-                [min(snapshotGrids.Grav.z(:)),...
-                max(snapshotGrids.Grav.z(:))];
-    end
-end
+% if ~IsDifference
+%     switch lower(PSCMPQSSPswitch)
+%         case 'pscmp'
+%             snapshotGrids.Gravity.range(5:6) = ...
+%                 [min(snapshotGrids.Gravity.z(:)),...
+%                 max(snapshotGrids.Gravity.z(:))];
+%         case 'qssp'
+%             snapshotGrids.Grav.range(5:6) = ...
+%                 [min(snapshotGrids.Grav.z(:)),...
+%                 max(snapshotGrids.Grav.z(:))];
+%     end
+% end
 % if IsDifference: no need to update z range in gmt-mex grid struct
 % since we are computing differences (and new z-ranges) soon
+
+switch lower(PSCMPQSSPswitch)
+    case 'pscmp'
+        snapshotGrids.Gravity.range(5:6) = ...
+            [min(snapshotGrids.Gravity.z(:)),...
+            max(snapshotGrids.Gravity.z(:))];
+    case 'qssp'
+        snapshotGrids.Grav.range(5:6) = ...
+            [min(snapshotGrids.Grav.z(:)),...
+            max(snapshotGrids.Grav.z(:))];
+end
 
 %% define units and conversion factor for each observable
 
@@ -428,13 +452,21 @@ end
 
 % 'all units are SI unless specified' (source: example input files)
 
-% common units
+% common units, format for GMT labels
 commonUnits.Displacement = 'mm';
 commonUnits.Stress = 'kPa';
 commonUnits.Tilt = '@~m@~rad'; % microrad
 commonUnits.Rotation = commonUnits.Tilt;
 commonUnits.Geoid = '@~m@~m'; % micrometers
 commonUnits.Gravity = '@~m@~Gal'; % microGal
+
+% commun units, format to populate grd field
+commonUnitsGridField.Displacement = commonUnits.Displacement;
+commonUnitsGridField.Stress = commonUnits.Stress;
+commonUnitsGridField.Tilt = 'microradians';
+commonUnitsGridField.Rotation = commonUnitsGridField.Tilt;
+commonUnitsGridField.Geoid = 'micrometers';
+commonUnitsGridField.Gravity = 'microGal';
 
 % common conversion factors
 commonConv.Displacement = 1e3;
@@ -445,9 +477,51 @@ commonConv.Rotation = commonConv.Tilt;
 commonConv.Geoid = 1e6;
 commonConv.Gravity = 1e8; % m/s2 to microGal
 
+% gravity: nanoGal for very small ranges
+% note that if use_nanoGal gets set to true, we convert to
+% microGal anyway in output maps
+use_nanoGal = false;
+% if range smaller than this value [m/s2], convert to nanoGal instead of microGal
+nanoGal_range = 1e-8; % [m/s2]
 switch lower(PSCMPQSSPswitch)
     case 'pscmp'
-        % units strings
+        if snapshotGrids.Gravity.range(6) - snapshotGrids.Gravity.range(5) < nanoGal_range
+            use_nanoGal = true;
+        end
+    case 'qssp'
+        if snapshotGrids.Grav.range(6) - snapshotGrids.Grav.range(5) < nanoGal_range
+            use_nanoGal = true;
+        end
+end
+if use_nanoGal
+    commonUnits.Gravity = 'nGal'; % nanoGal
+    commonConv.Gravity = 1e11; % m/s2 to nanoGal
+end
+
+% gravity: microGal for very large ranges
+% note that if use_milliGal gets set to true, we convert to
+% microGal anyway in output maps
+use_milliGal = false;
+% if range larger than this value [m/s2], convert to milliGal instead of microGal
+milliGal_range = 1e-5; % [m/s2]
+switch lower(PSCMPQSSPswitch)
+    case 'pscmp'
+        if snapshotGrids.Gravity.range(6) - snapshotGrids.Gravity.range(5) > milliGal_range
+            use_milliGal = true;
+        end
+    case 'qssp'
+        if snapshotGrids.Grav.range(6) - snapshotGrids.Grav.range(5) > milliGal_range
+            use_milliGal = true;
+        end
+end
+if use_milliGal
+    commonUnits.Gravity = 'mGal'; % milliGal
+    commonConv.Gravity = 1e5; % m/s2 to milliGal
+end
+
+switch lower(PSCMPQSSPswitch)
+    case 'pscmp'
+        % units strings (GMT maps labels)
         Units.Disp_north = commonUnits.Displacement;
         Units.Disp_east = commonUnits.Displacement;
         Units.Disp_down = commonUnits.Displacement;
@@ -463,6 +537,22 @@ switch lower(PSCMPQSSPswitch)
         Units.Geoid = commonUnits.Geoid;
         Units.Gravity = commonUnits.Gravity;
         Units.Disp_LOS = commonUnits.Displacement;
+        % units strings, z unit field in grid files
+        UnitsGridField.Disp_north = commonUnitsGridField.Displacement;
+        UnitsGridField.Disp_east = commonUnitsGridField.Displacement;
+        UnitsGridField.Disp_down = commonUnitsGridField.Displacement;
+        UnitsGridField.Stress_nn = commonUnitsGridField.Stress;
+        UnitsGridField.Stress_ee = commonUnitsGridField.Stress;
+        UnitsGridField.Stress_dd = commonUnitsGridField.Stress;
+        UnitsGridField.Stress_ne = commonUnitsGridField.Stress;
+        UnitsGridField.Stress_ed = commonUnitsGridField.Stress;
+        UnitsGridField.Stress_dn = commonUnitsGridField.Stress;
+        UnitsGridField.Tilt_n = commonUnitsGridField.Tilt;
+        UnitsGridField.Tilt_e = commonUnitsGridField.Tilt;
+        UnitsGridField.Rotation = commonUnitsGridField.Rotation;
+        UnitsGridField.Geoid = commonUnitsGridField.Geoid;
+        UnitsGridField.Gravity = commonUnitsGridField.Gravity;
+        UnitsGridField.Disp_LOS = commonUnitsGridField.Displacement;
         % conversion factors
         Conv.Disp_north = commonConv.Displacement;
         Conv.Disp_east = commonConv.Displacement;
@@ -480,16 +570,26 @@ switch lower(PSCMPQSSPswitch)
         Conv.Gravity = commonConv.Gravity;
         Conv.Disp_LOS = commonConv.Displacement_LOS;
     case 'qssp'
-        % units strings
-        Units.Station = '';
+        % units strings (GMT maps labels)
+        Units.Station = 'StationID';
         Units.U_n = commonUnits.Displacement;
         Units.U_e = commonUnits.Displacement;
         Units.U_z = commonUnits.Displacement;
-        Units.Vstrain = '10@+-6@+'; % adminesional
+        Units.Vstrain = '10@+-6@+'; % adimensional
         Units.Grav = commonUnits.Gravity;
         Units.Geoid = commonUnits.Geoid;
         Units.Tilt_n = commonUnits.Tilt;
         Units.Tilt_e = commonUnits.Tilt;
+        % units strings, z unit field in grid files
+        UnitsGridField.Station = 'StationID';
+        UnitsGridField.U_n = commonUnitsGridField.Displacement;
+        UnitsGridField.U_e = commonUnitsGridField.Displacement;
+        UnitsGridField.U_z = commonUnitsGridField.Displacement;
+        UnitsGridField.Vstrain = '1e-6'; % adimensional
+        UnitsGridField.Grav = commonUnitsGridField.Gravity;
+        UnitsGridField.Geoid = commonUnitsGridField.Geoid;
+        UnitsGridField.Tilt_n = commonUnitsGridField.Tilt;
+        UnitsGridField.Tilt_e = commonUnitsGridField.Tilt;
         % conversion factors
         Conv.Station = 1;
         Conv.U_n = commonConv.Displacement;
@@ -508,22 +608,22 @@ end
 % all ObservableNames
 
 %% compute snapshot-couple difference
-if IsDifference
-    snapshotGridsDifferences = snapshotGrids{1}; % to get the same grid structures
-    for n=1:size(ObservableNames, 1)
-        snapshotGridsDifferences.(ObservableNames{n}).z = ...
-            snapshotGrids{2}.(ObservableNames{n}).z - snapshotGrids{1}.(ObservableNames{n}).z;
-        snapshotGridsDifferences.(ObservableNames{n}).range(5:6) = ...
-            [min(snapshotGridsDifferences.(ObservableNames{n}).z(:)), ...
-            max(snapshotGridsDifferences.(ObservableNames{n}).z(:))];
-        snapshotGridsDifferences.(ObservableNames{n}).z_unit = Units.(ObservableNames{n});
-    end
-    % from now on: even if IsDifference is true,
-    % snapshotGrids is a scalar grid structure
-    % as if we had only one snapshot do plot
-    snapshotGrids = snapshotGridsDifferences;
-    
-end
+% if IsDifference
+%     snapshotGridsDifferences = snapshotGrids{1}; % to get the same grid structures
+%     for n=1:size(ObservableNames, 1)
+%         snapshotGridsDifferences.(ObservableNames{n}).z = ...
+%             snapshotGrids{2}.(ObservableNames{n}).z - snapshotGrids{1}.(ObservableNames{n}).z;
+%         snapshotGridsDifferences.(ObservableNames{n}).range(5:6) = ...
+%             [min(snapshotGridsDifferences.(ObservableNames{n}).z(:)), ...
+%             max(snapshotGridsDifferences.(ObservableNames{n}).z(:))];
+%         snapshotGridsDifferences.(ObservableNames{n}).z_unit = Units.(ObservableNames{n});
+%     end
+%     % from now on: even if IsDifference is true,
+%     % snapshotGrids is a scalar grid structure
+%     % as if we had only one snapshot do plot
+%     snapshotGrids = snapshotGridsDifferences;
+%     
+% end
 
 %% perform conversion (e.g. m to mm, m/s2 to mGal, ...)
 % multiplication by a factor AND update gmt mex grid structure min/max
@@ -534,25 +634,53 @@ for n=1:size(ObservableNames, 1)
     snapshotGrids.(ObservableNames{n}).range(5:6) = ...
         [min(snapshotGrids.(ObservableNames{n}).z(:)), ...
         max(snapshotGrids.(ObservableNames{n}).z(:))];
-    snapshotGrids.(ObservableNames{n}).z_unit = Units.(ObservableNames{n});
+    snapshotGrids.(ObservableNames{n}).z_unit = UnitsGridField.(ObservableNames{n});
 end
 
 %% create output folders, if they do not exist yet
 if ~exist(outputGridPath, 'dir')
     mkdir(outputGridPath)
 end
-if ~exist(outputPSPath, 'dir')
+
+% figure dirs: do not create if noPlotsFlag is true
+if ~noPlotsFlag && ~exist(outputPSPath, 'dir')
     mkdir(outputPSPath)
 end
-if ~exist(outputConvFigPath, 'dir')
+if ~noPlotsFlag && ~exist(outputConvFigPath, 'dir')
     mkdir(outputConvFigPath)
 end
 
 %% write grd files
+
+% TODO: move this at the beginning and avoid lots of switch-case
+switch lower(PSCMPQSSPswitch)
+    case 'pscmp'
+        gravity_observable = 'Gravity';
+    case 'qssp'
+        gravity_observable = 'Grav';
+end
+
 for n=1:size(ObservableNames, 1)
-    gmtMexGrid2grd(...
-        snapshotGrids.(ObservableNames{n}),...
-        [outputGridPath, (ObservableNames{n}), '.grd'])
+    % if the observable is gravity and we converted to nanoGal
+    % write data in microGal to grid, since this is the convention
+    if strcmpi(ObservableNames{n}, gravity_observable) && (use_nanoGal || use_milliGal)
+        temp_grid = snapshotGrids.(ObservableNames{n});
+        if use_nanoGal
+            temp_grid.z = temp_grid.z * 1e-3; % from nanoGal to microGal
+        elseif use_milliGal
+            temp_grid.z = temp_grid.z * 1e3; % from milliGal to microGal
+        else
+            error('This is the unreachable branch :)')
+        end
+        temp_grid.range(5:6) = [min(temp_grid.z(:)), max(temp_grid.z(:))];
+        gmtMexGrid2grd(...
+            temp_grid,...
+            [outputGridPath, (ObservableNames{n}), '.grd'])
+    else
+        gmtMexGrid2grd(...
+            snapshotGrids.(ObservableNames{n}),...
+            [outputGridPath, (ObservableNames{n}), '.grd'])
+    end
 end
 
 %% return if noPlotsFlag is true
@@ -612,6 +740,11 @@ end
 
 CommonGMT_start = tic;
 for m=1:size(ObservableNames, 1)
+    % contours: off if Station
+    doContours_current_figure = doContours;
+    if strcmpi(ObservableNames{m}, 'Station')
+        doContours_current_figure = false;
+    end
     GMT_progress = ['[',num2str(m,'%02.0f'),'/',...
         num2str(size(ObservableNames, 1),'%02.0f'),']'];
     GMT_start = tic;
@@ -624,7 +757,7 @@ for m=1:size(ObservableNames, 1)
             MapFilename, MapGrid, RJstring, CPTs.(ObservableNames{m}),...
             Units.(ObservableNames{m}), MinorTickInt.(ObservableNames{m}), [],...
             ObservableTitles{m},...
-            Map_PlotCountries, doContours,...
+            Map_PlotCountries, doContours_current_figure,...
             SourceType, sourceLonLat,...
             Map_LonLatGridInterval);
 
