@@ -40,12 +40,12 @@ else % edge buffer/trim was provided
 end
 
 Rstring = [... % extents, r option means lower left and upper right coords
-    '-R',num2str(MapRegionExtents(1)),'/',num2str(MapRegionExtents(3)),'/',...
+    '-R',num2str(MapRegionExtents(1)),'/',num2str(MapRegionExtents(3)), '/', ...
     num2str(MapRegionExtents(2)),'/',num2str(MapRegionExtents(4)),'r ']; % extents
-Jstring = ['-JA',...
-    num2str(RegionExtents(1)+(RegionExtents(2)-RegionExtents(1))/2),'/',... % lon0 center
-    num2str(RegionExtents(3)+(RegionExtents(4)-RegionExtents(3))/2),...     % lat0 center
-    '/6i']; % projection (-JA Lambert lon0/lat0)
+Jstring = ['-JA', ...
+    num2str(RegionExtents(1)+(RegionExtents(2)-RegionExtents(1))/2), '/', ... % lon0 center
+    num2str(RegionExtents(3)+(RegionExtents(4)-RegionExtents(3))/2), ...      % lat0 center
+    '/6i']; % projection (-JA Lambert lon0/lat0/width)
 RJstring = [Rstring, Jstring]; % extents and projection, concatenated
 
 end

@@ -47,18 +47,6 @@ end
 % common preamble of error messages, if assertions fail (followed by: reason)
 message_notGrid = 'data is not a regular lon by lat grid: ';
 
-% get the extents of data (whatever its form)
-lonRange = [min(snapshotAsTable.Londeg), max(snapshotAsTable.Londeg)];
-latRange = [min(snapshotAsTable.Latdeg), max(snapshotAsTable.Latdeg)];
-
-% assert that we are not dealing with constant-longitude data (min==max)
-assert(lonRange(1)~=lonRange(2),...
-    [message_notGrid, 'all points have the same latitude']);
-
-% assert that we are not dealing with constant-latitude data (min==max)
-assert(latRange(1)~=latRange(2),...
-    [message_notGrid, 'all points have the same longitude']);
-
 % extract the sampling step along longitude and latitude
 % by finding the "smallest positive non-zero interval" between subsequent points
 uniqueLonSteps = uniquetol(diff(snapshotAsTable.Londeg), tolStep);
@@ -72,5 +60,25 @@ uniqueLatSteps(uniqueLatSteps<=(0 + tolStep)) = [];
 lonStep = min(uniqueLonSteps);
 latStep = min(uniqueLatSteps);
 
+% get the extents of data (whatever its form)
+% longitude: are we crossing -180/180?
+% Note that this assumes that the longitude is in -180/180 form
+lon_crosses_180 = length(uniqueLonSteps) > 1;
+if ~lon_crosses_180
+    lonRange = [min(snapshotAsTable.Londeg), max(snapshotAsTable.Londeg)];
+else
+    lonRange = [ ...
+        min(wrapTo360(snapshotAsTable.Londeg)), ...
+        max(wrapTo360(snapshotAsTable.Londeg))];
 end
+latRange = [min(snapshotAsTable.Latdeg), max(snapshotAsTable.Latdeg)];
 
+% assert that we are not dealing with constant-longitude data (min==max)
+assert(lonRange(1)~=lonRange(2),...
+    [message_notGrid, 'all points have the same latitude']);
+
+% assert that we are not dealing with constant-latitude data (min==max)
+assert(latRange(1)~=latRange(2),...
+    [message_notGrid, 'all points have the same longitude']);
+
+end
